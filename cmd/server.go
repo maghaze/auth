@@ -3,36 +3,48 @@ package cmd
 import (
 	"os"
 
-	"github.com/maghaze/auth/internal/config"
-	"github.com/maghaze/auth/pkg/logger"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+
+	"github.com/maghaze/auth/internal/config"
+	"github.com/maghaze/auth/internal/ports/grpc"
+	"github.com/maghaze/auth/pkg/crypto"
+	"github.com/maghaze/auth/pkg/logger"
+	"github.com/maghaze/auth/pkg/token"
 )
 
-type Server struct{}
-
-func (cmd Server) Command(trap chan os.Signal) *cobra.Command {
-	run := func(_ *cobra.Command, _ []string) {
-		cmd.main(config.Load(true), trap)
-	}
-
-	return &cobra.Command{
-		Use:   "server",
-		Short: "serve the service",
-		Run:   run,
-	}
+type Server struct {
+	managementPort int
+	grpcPort       int
 }
 
-func (cmd *Server) main(cfg *config.Config, trap chan os.Signal) {
+func (server Server) Command(trap chan os.Signal) *cobra.Command {
+	run := func(_ *cobra.Command, _ []string) {
+		server.main(config.Load(true), trap)
+	}
+
+	cmd := &cobra.Command{
+		Use:   "server",
+		Short: "serve the authentication and authorization server",
+		Run:   run,
+	}
+
+	cmd.Flags().IntVar(&server.managementPort, "management-port", 8080, "The port the metrics and probe endpoint binds to")
+	cmd.Flags().IntVar(&server.grpcPort, "grpc-port", 9090, "The port the grpc endpoint listens on")
+
+	return cmd
+}
+
+func (server *Server) main(cfg *config.Config, trap chan os.Signal) {
 	logger := logger.NewZap(cfg.Logger)
 
-	// crypto := crypto.New(cfg.Crypto)
-	// token, err := token.New(cfg.Token)
-	// if err != nil {
-	// 	logger.Panic("Error creating token object", zap.Error(err))
-	// }
+	crypto := crypto.New(cfg.Crypto)
+	token, err := token.New(cfg.Token)
+	if err != nil {
+		logger.Panic("Error creating token object", zap.Error(err))
+	}
 
-	// go grpc.New(cfg.Grpc, logger, crypto, token).Serve()
+	go grpc.New(logger, crypto, token).Serve(server.grpcPort)
 
 	// Keep this at the bottom of the main function
 	field := zap.String("signal trap", (<-trap).String())

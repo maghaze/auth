@@ -3,7 +3,6 @@ package config
 import (
 	"time"
 
-	"github.com/maghaze/auth/internal/ports/grpc"
 	"github.com/maghaze/auth/pkg/crypto"
 	"github.com/maghaze/auth/pkg/logger"
 	"github.com/maghaze/auth/pkg/token"
@@ -15,9 +14,6 @@ func Default() *Config {
 			Development: true,
 			Level:       "debug",
 			Encoding:    "console",
-		},
-		Grpc: &grpc.Config{
-			ListenPort: 9090,
 		},
 		Token: &token.Config{
 			PrivatePem: "-----BEGIN PRIVATE KEY-----\n" +

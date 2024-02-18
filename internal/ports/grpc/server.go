@@ -12,7 +12,6 @@ import (
 )
 
 type server struct {
-	config *Config
 	logger *zap.Logger
 	crypto crypto.Crypto
 	token  token.Token
@@ -21,8 +20,8 @@ type server struct {
 	pb.UnimplementedAuthServer
 }
 
-func New(cfg *Config, log *zap.Logger, c crypto.Crypto, t token.Token) *server {
-	s := &server{config: cfg, logger: log, crypto: c, token: t}
+func New(log *zap.Logger, c crypto.Crypto, t token.Token) *server {
+	s := &server{logger: log, crypto: c, token: t}
 
 	s.api = grpc.NewServer()
 	pb.RegisterAuthServer(s.api, s)
@@ -30,13 +29,13 @@ func New(cfg *Config, log *zap.Logger, c crypto.Crypto, t token.Token) *server {
 	return s
 }
 
-func (s *server) Serve() {
-	address := fmt.Sprintf(":%d", s.config.ListenPort)
-	listener, err := net.Listen("tcp", address)
+func (s *server) Serve(port int) {
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		s.logger.Panic("Error listening on tcp address", zap.Int("port", s.config.ListenPort), zap.Error(err))
+		s.logger.Panic("Error listening on tcp address", zap.Int("port", port), zap.Error(err))
 	}
 
+	s.logger.Info("GRPC server starts listening on", zap.Int("port", port))
 	if err := s.api.Serve(listener); err != nil {
 		s.logger.Fatal("Error serving gRPC server", zap.Error(err))
 	}
