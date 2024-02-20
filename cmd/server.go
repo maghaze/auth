@@ -8,6 +8,7 @@ import (
 
 	"github.com/maghaze/auth/internal/config"
 	"github.com/maghaze/auth/internal/ports/grpc"
+	"github.com/maghaze/auth/internal/ports/rest"
 	"github.com/maghaze/auth/pkg/crypto"
 	"github.com/maghaze/auth/pkg/logger"
 	"github.com/maghaze/auth/pkg/token"
@@ -44,6 +45,7 @@ func (server *Server) main(cfg *config.Config, trap chan os.Signal) {
 		logger.Panic("Error creating token object", zap.Error(err))
 	}
 
+	go rest.New(logger).Serve(server.managementPort)
 	go grpc.New(logger, crypto, token).Serve(server.grpcPort)
 
 	// Keep this at the bottom of the main function

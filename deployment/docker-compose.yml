@@ -1,0 +1,9 @@
+---
+version: '3.8'
+services:
+  auth:
+    image: ghcr.io/maghaze/auth
+    restart: always
+    ports:
+      - 8080:8080
+      - 9090:9090

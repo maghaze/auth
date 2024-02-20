@@ -1,0 +1,72 @@
+---
+replicaCount: 1
+
+image:
+  registry: ghcr.io
+  repository: maghaze/auth
+  pullPolicy: IfNotPresent
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  management:
+    type: ClusterIP
+    protocol: TCP
+    port: 8080
+  grpc:
+    type: ClusterIP
+    protocol: TCP
+    port: 9090
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1GiB
+  requests:
+    cpu: 200m
+    memory: 512Mi
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+serviceMonitor:
+  enabled: true
+  release: kube-prometheus-stack

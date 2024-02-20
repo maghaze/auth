@@ -19,8 +19,9 @@ func New(log *zap.Logger) *Server {
 	server := &Server{logger: log}
 
 	server.app = fiber.New(fiber.Config{
-		JSONEncoder: json.Marshal,
-		JSONDecoder: json.Unmarshal,
+		JSONEncoder:           json.Marshal,
+		JSONDecoder:           json.Unmarshal,
+		DisableStartupMessage: true,
 	})
 
 	prometheus := fiberprometheus.New("auth")
@@ -33,11 +34,9 @@ func New(log *zap.Logger) *Server {
 	return server
 }
 
-func (server *Server) Serve(port int) error {
+func (server *Server) Serve(port int) {
 	server.logger.Info("HTTP server starts listening on", zap.Int("port", port))
 	if err := server.app.Listen(fmt.Sprintf(":%d", port)); err != nil {
-		server.logger.Error("error starting HTTP server", zap.Error(err))
-		return err
+		server.logger.Fatal("error starting HTTP server", zap.Error(err))
 	}
-	return nil
 }
