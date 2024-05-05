@@ -1,8 +1,8 @@
 package main
 
 import (
+	"context"
 	"log"
-	"os"
 	"os/signal"
 	"syscall"
 
@@ -12,14 +12,14 @@ import (
 )
 
 func main() {
-	const description = "auth microservice for CafeKetab"
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	const description = "Auth microservice helps to authenticate users as a seperate microservice"
 	root := &cobra.Command{Short: description}
 
-	trap := make(chan os.Signal, 1)
-	signal.Notify(trap, syscall.SIGINT, syscall.SIGTERM)
-
 	root.AddCommand(
-		cmd.Server{}.Command(trap),
+		cmd.Server{}.Command(ctx),
 	)
 
 	if err := root.Execute(); err != nil {

@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"os"
+	"context"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -15,40 +15,55 @@ import (
 )
 
 type Server struct {
+	// values from commandline arguments and parameters
 	managementPort int
 	grpcPort       int
+
+	// values that have been initialized
+	config *config.Config
+	logger *zap.Logger
+	crypto crypto.Crypto
+	token  token.Token
 }
 
-func (server Server) Command(trap chan os.Signal) *cobra.Command {
-	run := func(_ *cobra.Command, _ []string) {
-		server.main(config.Load(true), trap)
-	}
-
+func (server Server) Command(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "server",
-		Short: "serve the authentication and authorization server",
-		Run:   run,
+		Short: "Serve the authentication and authorization server",
+		Run: func(_ *cobra.Command, _ []string) {
+			defer func() {
+				<-ctx.Done()
+				server.logger.Warn("Got interruption signal, gracefully shutdown the server")
+				server.shutdown()
+			}()
+
+			server.initialize()
+			server.serve()
+		},
 	}
 
-	cmd.Flags().IntVar(&server.managementPort, "management-port", 8080, "The port the metrics and probe endpoint binds to")
+	cmd.Flags().IntVar(&server.managementPort, "management-port", 8080, "The port the metrics and probe endpoints exposed from")
 	cmd.Flags().IntVar(&server.grpcPort, "grpc-port", 9090, "The port the grpc endpoint listens on")
 
 	return cmd
 }
 
-func (server *Server) main(cfg *config.Config, trap chan os.Signal) {
-	logger := logger.NewZap(cfg.Logger)
+func (server *Server) initialize() {
+	var err error
 
-	crypto := crypto.New(cfg.Crypto)
-	token, err := token.New(cfg.Token)
+	server.config = config.Load(true)
+	server.logger = logger.NewZap(server.config.Logger)
+
+	server.crypto = crypto.New(server.config.Crypto)
+	server.token, err = token.New(server.config.Token)
 	if err != nil {
-		logger.Panic("Error creating token object", zap.Error(err))
+		server.logger.Panic("Error creating token object", zap.Error(err))
 	}
-
-	go rest.New(logger).Serve(server.managementPort)
-	go grpc.New(logger, crypto, token).Serve(server.grpcPort)
-
-	// Keep this at the bottom of the main function
-	field := zap.String("signal trap", (<-trap).String())
-	logger.Info("exiting by receiving a unix signal", field)
 }
+
+func (server *Server) serve() {
+	go rest.New(server.logger).Serve(server.managementPort)
+	go grpc.New(server.logger, server.crypto, server.token).Serve(server.grpcPort)
+}
+
+func (server *Server) shutdown() {}

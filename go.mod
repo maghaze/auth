@@ -1,6 +1,6 @@
 module github.com/maghaze/auth
 
-go 1.21.5
+go 1.21
 
 require (
 	github.com/ansrivas/fiberprometheus/v2 v2.6.1
